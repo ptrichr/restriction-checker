@@ -2,8 +2,6 @@
 opam-version: "2.0"
 synopsis:
   "Gather information about module usage, top-level bindings, and function calls"
-description:
-  "Used by CMSC330 to determine whether or not student submissions have met restrictions imposed by project guidelines. Powered by the OCaml compilerlib parsetree module."
 maintainer: ["[" "cliff" "ptrichr" "]"]
 authors: ["[" "cliff" "ptrichr" "]"]
 license: "MIT"
