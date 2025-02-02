@@ -1,0 +1,8 @@
+(library
+ (name synopsis)
+(libraries compiler-libs.common)
+)
+
+(env
+  (dev
+    (flags (:standard -w -A))))
