@@ -4,10 +4,10 @@ synopsis:
   "Gather information about module usage, top-level bindings, and function calls"
 description:
   "Used in CMSC330 to determine whether or not student submissions have met restrictions imposed by project guidelines. Powered by the OCaml compilerlib parsetree module."
-maintainer: ["cliff"]
-authors: ["cliff"]
-homepage: "https://github.com/umd-cmsc330/fall24-ta"
-bug-reports: "https://github.com/umd-cmsc330/fall24-ta/issues"
+maintainers: ["cliff" "ptrichr"]
+authors: ["cliff" "ptrichr"]
+homepage: "https://github.com/ptrichr/synopsis"
+bug-reports: "https://github.com/ptrichr/synopsis/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.15"}
@@ -27,4 +27,4 @@ build: [
     "@doc" {with-doc}
   ]
 ]
-dev-repo: "git+https://github.com/umd-cmsc330/fall24-ta.git"
+dev-repo: "git+https://github.com/ptrichr/synopsis.git"

@@ -5,11 +5,11 @@
 (generate_opam_files true)
 
 (source
- (github umd-cmsc330/fall24-ta))
+ (github ptrichr/synopsis))
 
-(authors "cliff")
+(authors ["cliff" "ptrichr"])
 
-(maintainers "cliff")
+(maintainers ["cliff" "ptrichr"])
 
 (package
  (name synopsis)
