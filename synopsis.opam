@@ -4,7 +4,7 @@ synopsis:
   "Gather information about module usage, top-level bindings, and function calls"
 description:
   "Used in CMSC330 to determine whether or not student submissions have met restrictions imposed by project guidelines. Powered by the OCaml compilerlib parsetree module."
-maintainers: ["cliff" "ptrichr"]
+maintainer: ["cliff" "ptrichr"]
 authors: ["cliff" "ptrichr"]
 homepage: "https://github.com/ptrichr/synopsis"
 bug-reports: "https://github.com/ptrichr/synopsis/issues"
