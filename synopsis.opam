@@ -9,7 +9,6 @@ authors: ["cliff" "ptrichr"]
 homepage: "https://github.com/umd-cmsc330/restriction-checker"
 bug-reports: "https://github.com/umd-cmsc330/restriction-checker/issues"
 dev-repo: "git+https://github.com/umd-cmsc330/restriction-checker.git"
-archive: "https://github.com/umd-cmsc330/restriction-checker/archive/refs/tags/1.0.tar.gz"
 depends: [
   "ocaml"
   "dune" {>= "3.15"}
