@@ -2,6 +2,8 @@
 
 (generate_opam_files true)
 
+(name synopsis)
+
 (package
   (name synopsis)
   (authors "cliff" "ptrichr")
