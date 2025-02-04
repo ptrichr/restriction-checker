@@ -1,5 +1,5 @@
 (library
- (name synopsis)
+ (public_name synopsis)
 (libraries compiler-libs.common)
 )
 
