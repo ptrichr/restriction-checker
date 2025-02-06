@@ -6,9 +6,10 @@
 
 (package
   (name synopsis)
-  (authors "cliff" "ptrichr")
-  (maintainers "cliff" "ptrichr")
-  (synopsis "Gather information about module usage, top-level bindings, and function calls")
+  (authors "umd-cmsc330" "ptrichr")
+  (maintainers "umd-cmsc330")
+  (synopsis "Examines the parsetree")
+  (description "Synopsis gathers information about a program's parsetree. Namely, module usage, definitions, and function calls.")
   (license MIT)
   (source
     (github umd-cmsc330/restriction-checker))
