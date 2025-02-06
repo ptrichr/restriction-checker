@@ -1,3 +1,5 @@
+(** utilities for synopsis *)
+
 type _identifier = string
 type _module = string
 type _call = string

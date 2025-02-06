@@ -1,3 +1,5 @@
+(** top-level synopsis fuctions, used for enforcing restrictions *)
+
 let read_string str = 
   let tree = Parse.implementation (Lexing.from_string str) in
   List.fold_left (fun a item -> Utils.get_synopsis item ~acc:a) {modules = []; definitions = []} tree
