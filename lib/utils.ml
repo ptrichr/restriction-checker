@@ -2,19 +2,20 @@ type _identifier = string
 type _module = string
 type _call = string
 type _binding = bool * string list
+type _definition = _binding list * _call list
 type _synopsis = {
-    modules: _module list ;                             (** a list of modules opened/used *)
-    definitions: (_binding list * _call list) list ;    (** a list of bindings and function calls *)
+    modules: _module list ;
+    definitions: _definition list ;
    }
 
 (** set insert *)
 let insert p q = List.fold_left (fun a n -> if (List.mem n a) then a else a @ [n]) p q
 
-let get_desc ({pstr_desc=d; _}:Parsetree.structure_item) = d
+let get_desc ~item:({pstr_desc=d; _}:Parsetree.structure_item) = d
 
-let get_exp_desc ({pexp_desc=d; _}:Parsetree.expression) = d
+let get_exp_desc ~expression:({pexp_desc=d; _}:Parsetree.expression) = d
 
-let get_pattern_desc({ppat_desc=d; _}:Parsetree.pattern) = d
+let get_pattern_desc ~pattern:({ppat_desc=d; _}:Parsetree.pattern) = d
 
 let rec get_names_from_lident (id:Longident.t) = 
   match id with
@@ -22,14 +23,14 @@ let rec get_names_from_lident (id:Longident.t) =
   |Longident.Ldot(_, _) -> [String.concat "." (List.rev (Longident.flatten id))]
   |Longident.Lapply(a,b) -> (get_names_from_lident a)@(get_names_from_lident b)
 
-let get_module_ident (x:Parsetree.open_declaration) = 
-  match x with
+let get_module_ident (dec:Parsetree.open_declaration) = 
+  match dec with
   |{popen_expr =
-      {pmod_desc = Pmod_ident({Asttypes.txt = x; _}); _}; _} -> get_names_from_lident x
+      {pmod_desc = Pmod_ident({Asttypes.txt = lid; _}); _}; _} -> get_names_from_lident lid
   |_ -> raise (Failure "Could not get module identifier")
 
 let rec get_names_from_pattern (p:Parsetree.pattern) = 
-  match get_pattern_desc p with
+  match get_pattern_desc ~pattern:p with
   |Ppat_any -> []
   |Ppat_var({Asttypes.txt=x;_}) -> [x]
   |Ppat_alias(pat,{Asttypes.txt=x;_}) -> insert (get_names_from_pattern pat) [x]
@@ -54,10 +55,10 @@ let rec get_bindings_calls (exp:Parsetree.expression) =
     List.fold_left (fun (a, b) {Parsetree.pc_rhs=x; _} ->
                       let bindings, calls = get_bindings_calls x in
                       (insert a bindings, insert b calls)) ([],[]) cs
-  in match get_exp_desc exp with
+  in match get_exp_desc ~expression:exp with
   |Pexp_ident(_) -> ([], [])
   |Pexp_let(rf,vb_lst,e) -> 
-    let bindings, calls = List.fold_left (deconstruct_binding rf) ([], []) vb_lst
+    let bindings, calls = deconstruct_binding_list rf vb_lst
     in let bindings', calls' = get_bindings_calls e
     in (insert bindings bindings', insert calls calls')
   |Pexp_function(_, _, Pfunction_cases(case_lst,_,_)) -> parse_cases case_lst
@@ -65,7 +66,7 @@ let rec get_bindings_calls (exp:Parsetree.expression) =
   |Pexp_apply(e,lst) -> 
     (* gets the bindings and calls from the function applied *)
     let bindings, calls = 
-      (match get_exp_desc e with
+      (match get_exp_desc ~expression:e with
        |Pexp_ident({Asttypes.txt=i; _}) -> ([], get_names_from_lident i)
        |_ -> get_bindings_calls e)
     (* get the bindings and calls from the arguments *)
@@ -83,7 +84,7 @@ let rec get_bindings_calls (exp:Parsetree.expression) =
   |Pexp_record(cs, _) ->
     List.fold_left (fun (a, b) (_, ex) -> let bindings, calls = get_bindings_calls ex in
                                           (insert a bindings, insert b calls)) ([], []) cs
-  |Pexp_setfield(_, _, _) -> raise (Failure "Illegal use of set (in a mutable field context)")
+  |Pexp_setfield(_, _, _) -> raise (Failure "Illegal use of mutable field")
   |Pexp_array(_) -> raise (Failure "Illegal use of array construct")
   |Pexp_ifthenelse(guard, t_branch, e_opt) ->
     let bindings, calls = get_bindings_calls guard in
@@ -97,17 +98,16 @@ let rec get_bindings_calls (exp:Parsetree.expression) =
   |Pexp_while(_, _) -> raise (Failure "Illegal use of while loop construct")
   |Pexp_for(_, _, _, _, _) -> raise (Failure "Illegal use of for loop construct")
   |_ -> ([],[])
+and deconstruct_binding_list rf vb_lst = 
+  let deconstruct_binding ~acc:(a, b) ~binding:{Parsetree.pvb_pat=bindee; Parsetree.pvb_expr=expr; _} =
+    let binding = (rf = Asttypes.Recursive, get_names_from_pattern bindee) in
+    let sub_bindings, calls = get_bindings_calls expr in
+    (insert a (binding::sub_bindings), insert b calls)
+  in List.fold_left (fun a n -> deconstruct_binding ~acc:a ~binding:n) ([], []) vb_lst
 
-and deconstruct_binding rf (a, b) {Parsetree.pvb_pat=bindee; Parsetree.pvb_expr=expr; _} =
-  let binding = (rf = Asttypes.Recursive, get_names_from_pattern bindee) in
-  let sub_bindings, calls = get_bindings_calls expr in
-  (insert a (binding::sub_bindings), insert b calls)
-
-let get_synopsis (i:Parsetree.structure_item) {modules=m; definitions=d} = 
-  match get_desc i with
+let get_synopsis (item:Parsetree.structure_item) ~acc:{modules=m; definitions=d} = 
+  match get_desc ~item:item with
   |Pstr_open (e) -> {modules = insert m (get_module_ident e); definitions = d}
   |Pstr_eval(e, _) -> {modules = m; definitions = d @ [get_bindings_calls e]}
-  |Pstr_value(rf,vb_lst) ->       
-    let res = List.fold_left (deconstruct_binding rf) ([], []) vb_lst
-    in {modules = m; definitions = d @ [res]}
-  |_ -> raise (Failure "Unknown parsetree type?")    
+  |Pstr_value(rf,vb_lst) -> {modules = m; definitions = d @ [deconstruct_binding_list rf vb_lst]}
+  |_ -> raise (Failure "Unknown parsetree type?")

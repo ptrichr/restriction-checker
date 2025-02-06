@@ -1,9 +1,9 @@
-(** (testing util) generate synopsis from string
+(** generate a synopsis from a string
     @param str ocaml expression represented as a string 
     @return synopsis of ocaml expression *)
 val read_string: string -> Utils._synopsis
 
-(** generate synopsis from input channel
+(** generate a synopsis from a file
     @param src filepath to read from
     @return synopsis of file read *)
 val read_file: string -> Utils._synopsis
