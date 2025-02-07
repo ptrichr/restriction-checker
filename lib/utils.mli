@@ -4,7 +4,7 @@ type _identifier = string
 type _call = string
 
 (** wrapper for boolean flag that represents if a definition is recursive *)
-type _def_type = private
+type _def_type =
   Recursive | Non_recursive
 
 (** defines a binding: is it recursive? what identifiers does it bind? *)
