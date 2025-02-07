@@ -1,19 +1,22 @@
 (** utilities for synopsis *)
 
 type _identifier = string
-type _module = string
 type _call = string
 
+(** wrapper for boolean flag that represents if a definition is recursive *)
+type _def_type = private
+  Recursive | Non_recursive
+
 (** defines a binding: is it recursive? what identifiers does it bind? *)
-type _binding = bool * string list
+type _binding = _def_type * _identifier list
 
 (** defines a definition: what does it bind? what functions are called in its body? *)
 type _definition = _binding list * _call list
 
 (** a type that decribes certain aspects of a program's parsetree. *)
 type _synopsis = {
-    modules: _module list ;         (** a list of identifiers of modules opened/used *)
-    definitions: _definition list ; (** a list of top-level _definitions *)
+    modules: _identifier list ;         (** a list of identifiers of modules opened/used *)
+    definitions: _definition list ; (** a list of top-level [_definitions] *)
    }
 
 (** set insert... not much else to say *)
@@ -30,25 +33,25 @@ val get_module_ident: Parsetree.open_declaration -> _identifier list
   *)
 val get_names_from_pattern: Parsetree.pattern -> _identifier list
 
-(** parses a Parsetree.expression into a _definition, containing
+(** parses a Parsetree.expression into a [_definition], containing
     the bindings and function applications that occur
     @param exp expression being parsed
-    @return _definition representing bindings and function calls
+    @return [_definition] representing bindings and function calls
             happening inside the expression 
   *)
 val get_bindings_calls: Parsetree.expression -> _definition
 
-(** turns a Parsetree.value_binding list into a _definition for the items bound
+(** turns a Parsetree.value_binding list into a [_definition] for the items bound
     by the expression being parsed 
     @param rf whether or not the binding is recursive
     @param vb_lst the list of value bindings to convert
-    @return _definition representing the value bindings
+    @return [_definition] representing the value bindings
   *)
 val deconstruct_binding_list: Asttypes.rec_flag -> Parsetree.value_binding list -> _definition
 
 (** generates updates a synopsis with information via the structure item argument
     @param the item to deconstruct into a synopsis
-    @param acc the _synopsis to accumulate information into
+    @param acc the [_synopsis] to accumulate information into
     @return new updated synopsis record
   *)
 val get_synopsis: Parsetree.structure_item -> acc:_synopsis -> _synopsis

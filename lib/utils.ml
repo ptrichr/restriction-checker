@@ -1,10 +1,11 @@
 type _identifier = string
-type _module = string
 type _call = string
-type _binding = bool * string list
+type _def_type = 
+  Recursive | Non_recursive
+type _binding = _def_type * _identifier list
 type _definition = _binding list * _call list
 type _synopsis = {
-    modules: _module list ;
+    modules: _identifier list ;
     definitions: _definition list ;
    }
 
@@ -98,11 +99,12 @@ let rec get_bindings_calls (exp:Parsetree.expression) =
   |Pexp_while(_, _) -> raise (Failure "Illegal use of while loop construct")
   |Pexp_for(_, _, _, _, _) -> raise (Failure "Illegal use of for loop construct")
   |_ -> ([],[])
+
 and deconstruct_binding_list rf vb_lst = 
   let deconstruct_binding ~acc:(a, b) ~binding:{Parsetree.pvb_pat=bindee; Parsetree.pvb_expr=expr; _} =
-    let binding = (rf = Asttypes.Recursive, get_names_from_pattern bindee) in
-    let sub_bindings, calls = get_bindings_calls expr in
-    (insert a (binding::sub_bindings), insert b calls)
+    let binding = ((if rf = Asttypes.Recursive then Recursive else Non_recursive), get_names_from_pattern bindee)
+    in let sub_bindings, calls = get_bindings_calls expr
+    in (insert a (binding::sub_bindings), insert b calls)
   in List.fold_left (fun a n -> deconstruct_binding ~acc:a ~binding:n) ([], []) vb_lst
 
 let get_synopsis (item:Parsetree.structure_item) ~acc:{modules=m; definitions=d} = 
