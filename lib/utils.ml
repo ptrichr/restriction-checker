@@ -1,3 +1,5 @@
+(** utilities for synopsis *)
+
 type _identifier = string
 type _call = string
 type _def_type = 
@@ -9,7 +11,6 @@ type _synopsis = {
     definitions: _definition list ;
    }
 
-(** set insert *)
 let insert p q = List.fold_left (fun a n -> if (List.mem n a) then a else a @ [n]) p q
 
 let get_desc ~item:({pstr_desc=d; _}:Parsetree.structure_item) = d
