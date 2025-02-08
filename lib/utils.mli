@@ -11,11 +11,11 @@ type _binding = _def_type * _identifier list
 type _definition = _binding list * _call list
 (** defines a definition: what does it bind? what functions are called in its body? *)
 
+(** a type that decribes certain aspects of a program's parsetree. *)
 type _synopsis = {
-    modules: _identifier list ;         (** a list of identifiers of modules opened/used *)
+    modules: _identifier list ;     (** a list of identifiers of modules opened/used *)
     definitions: _definition list ; (** a list of top-level [_definitions] *)
    }
-(** a type that decribes certain aspects of a program's parsetree. *)
 
 val insert: 'a list -> 'a list -> 'a list
 val get_desc: item:Parsetree.structure_item -> Parsetree.structure_item_desc
