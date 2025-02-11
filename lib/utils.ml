@@ -113,4 +113,5 @@ let get_synopsis (item:Parsetree.structure_item) ~acc:{modules=m; definitions=d}
   |Pstr_open (e) -> {modules = insert m (get_module_ident e); definitions = d}
   |Pstr_eval(e, _) -> {modules = m; definitions = d @ [get_bindings_calls e]}
   |Pstr_value(rf,vb_lst) -> {modules = m; definitions = d @ [deconstruct_binding_list rf vb_lst]}
+  |Pstr_type(_) -> {modules = m; definitions = d}
   |_ -> raise (Failure "Unknown parsetree type?")
