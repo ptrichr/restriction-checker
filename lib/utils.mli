@@ -1,23 +1,21 @@
 type _identifier = string
 type _call = string
 
-type _def_type =
-  Recursive | Non_recursive
-(** wrapper for boolean flag that represents if a definition is recursive *)
-
-type _binding = _def_type * _identifier list
+type _binding = bool * _identifier list
 (** defines a binding: is it recursive? what identifiers does it bind? *)
 
 type _definition = _binding list * _call list
 (** defines a definition: what does it bind? what functions are called in its body? *)
 
-(** a type that decribes certain aspects of a program's parsetree. *)
 type _synopsis = {
-    modules: _identifier list ;     (** a list of identifiers of modules opened/used *)
-    definitions: _definition list ; (** a list of top-level [_definitions] *)
-   }
+  modules: _identifier list ;
+  definitions: _definition list ;
+  }
+(** decribes certain aspects of a program's parsetree, 
+    namely the modules opened, values bound, and functions 
+    called in each binding. *)
 
-val insert: 'a list -> 'a list -> 'a list
+val union: string list list -> string list
 val get_desc: item:Parsetree.structure_item -> Parsetree.structure_item_desc
 val get_exp_desc: expression:Parsetree.expression -> Parsetree.expression_desc
 val get_pattern_desc: pattern:Parsetree.pattern -> Parsetree.pattern_desc
