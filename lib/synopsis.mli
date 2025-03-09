@@ -8,9 +8,5 @@ val read_file: string -> Utils._synopsis
     @param src filepath to read from
     @return synopsis of file read *)
 
-val contains_illegal_expr: string list -> string list -> bool -> bool
-(** determines if a synopsis contains illegal expressions, set by a list of constraints.
-    @param constr defines usage constraints
-    @param items items to check against constraints
-    @param mode defines whether or not constr is a blacklist or whitelist (true is whitelist)
-    @return whether or not the items breach constraints *)
+val module_check: Utils._synopsis list -> string list -> unit
+val ref_check: Utils._synopsis list -> unit
