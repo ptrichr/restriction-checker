@@ -11,6 +11,7 @@ bug-reports: "https://github.com/umd-cmsc330/restriction-checker/issues"
 depends: [
   "ocaml" {>= "5.2.0"}
   "dune" {>= "3.15"}
+  "ounit2" {>= "2.2.7"}
   "odoc" {with-doc}
 ]
 build: [

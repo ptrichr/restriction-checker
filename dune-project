@@ -15,7 +15,8 @@
     (github umd-cmsc330/restriction-checker))
   (depends 
     (ocaml (>= 5.2.0)) 
-    dune)
+    dune
+    (ounit2 (>= 2.2.7)))
   (allow_empty))
 
 ; See the complete stanza docs at https://dune.readthedocs.io/en/latest/reference/dune-project/index.html
