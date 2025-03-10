@@ -6,40 +6,45 @@ type _identifier = string
 type _call = string
 type _binding = bool * _identifier list
 type _definition = _binding list * _call list
+(* i elected for a record because the field names are readable *)
+(* yeah, i think the next big refactor will be making the functions
+   take a synopsis and update it, kind of like nfas from p3 *)
 type _synopsis = {
     modules: _identifier list ;
-    (* maybe we can just have an imperative bool? *)
+    (* maybe add a list of imperative constructs used *)
     definitions: _definition list ;
    }
 
 (* set union of multiple lists of strings *)
-let union sets = StringSet.(to_list (List.fold_left (union) (StringSet.empty) (List.map (of_list) sets)))
+(* what's the overhead of this vs keeping everything a list? *)
+let union lsts = 
+  let open StringSet in
+  List.concat lsts |> of_list |> to_list
 
-let get_desc ~item:({pstr_desc=d; _}:Parsetree.structure_item) = d
-
-let get_exp_desc ~expression:({pexp_desc=d; _}:Parsetree.expression) = d
-
-let get_pattern_desc ~pattern:({ppat_desc=d; _}:Parsetree.pattern) = d
+let get_exp_desc ({pexp_desc=d; _}:Parsetree.expression) = d
 
 let rec get_names_from_lident (id:Longident.t) = 
   match id with
-  |Longident.Lident(x) -> [x]
-  |Longident.Ldot(_, _) -> [String.concat "." (List.rev (Longident.flatten id))]
-  |Longident.Lapply(a,b) -> (get_names_from_lident a)@(get_names_from_lident b)
+  |Lident(x) -> [x]
+  |Ldot(_, _) -> [String.concat "." (Longident.flatten id)]
+  |Lapply(a,b) -> (get_names_from_lident a) @ (get_names_from_lident b)
 
-let get_module_ident (dec:Parsetree.open_declaration) = 
-  match dec with
-  |{popen_expr =
-      {pmod_desc = Pmod_ident({Asttypes.txt = lid; _}); _}; _} -> get_names_from_lident lid
-  |_ -> raise (Failure "Weird module identifier. This probably isn't allowed")
+(* use for ppat open too *)
+let parse_loc ({Asttypes.txt=id; _}:Longident.t Asttypes.loc) = get_names_from_lident id
 
-let add_module_binding mods ({pmb_name={Asttypes.txt=opt; _}; _}:Parsetree.module_binding) =
-  match opt with
-  |None -> mods
-  |Some(name) -> name::mods
+(* gather modules used from function calls of the syntax: (M.)*f *)
+let modules_from_calls calls = 
+  let open List in
+  (* gets all but last id (the function's id) in something like (module name.)*function *)
+  let parse_dot names = 
+    match rev names with
+    |[_] -> []
+    |_::t -> t
+    |_ -> []
+  in map (String.split_on_char '.') calls |> concat_map parse_dot
 
-let rec get_names_from_pattern (p:Parsetree.pattern) = 
-  match get_pattern_desc ~pattern:p with
+let rec get_names_from_pattern ({ppat_desc=desc; _}:Parsetree.pattern) = 
+  match desc with
   |Ppat_any -> []
   |Ppat_var({Asttypes.txt=x;_}) -> [x]
   |Ppat_alias(pat,{Asttypes.txt=x;_}) -> union [get_names_from_pattern pat; [x]]
@@ -57,26 +62,29 @@ let rec get_names_from_pattern (p:Parsetree.pattern) =
                       union [a; get_names_from_lident x; get_names_from_pattern p]) [] lst
   |Ppat_array(lst) -> List.fold_left (fun a x -> union [a; get_names_from_pattern x]) [] lst
   |Ppat_or(a,b) -> union [get_names_from_pattern a; get_names_from_pattern b]
-  |_ -> []
+  |Ppat_constraint(p, _) | Ppat_exception(p) -> get_names_from_pattern p
+  (* my gripe with this is that we will have to take in the modules list *)
+  |Ppat_open(_, _) -> failwith "hmm what to do here, we probably should capture the module name?"
+  |_ -> raise (Failure "using something like ppat_type, lazy, unpack or extension")
 
 (* are bindings guaranteed to be unique? if no, which ones do we care about? the most recent? *)
-let rec get_bindings_calls (exp:Parsetree.expression) =
+let rec get_bindings_calls ({pexp_desc=desc; _}:Parsetree.expression) =
   let parse_cases cs = 
     List.fold_left (fun (a, b) {Parsetree.pc_rhs=x; _} ->
                       let bindings, calls = get_bindings_calls x in
                       (a @ bindings, union [b; calls])) ([], []) cs
-  in match get_exp_desc ~expression:exp with
-  |Pexp_ident(_) -> ([], [])
+  in match desc with
+  |Pexp_ident(_) -> ([], [])    (* we don't care about random identifiers *)
   |Pexp_let(rf,vb_lst,e) -> 
-    let bindings, calls = deconstruct_binding_list rf vb_lst
-    in let bindings', calls' = get_bindings_calls e
-    in (bindings @ bindings', union [calls; calls'])
+    let bindings, calls = deconstruct_binding_list rf vb_lst in
+    let bindings', calls' = get_bindings_calls e in
+    (bindings @ bindings', union [calls; calls'])
   |Pexp_function(_, _, Pfunction_cases(case_lst,_,_)) -> parse_cases case_lst
   |Pexp_function(_, _, Pfunction_body(e)) -> get_bindings_calls e
   |Pexp_apply(e,lst) -> 
     (* gets the bindings and calls from the function applied *)
     let bindings, calls = 
-      (match get_exp_desc ~expression:e with
+      (match get_exp_desc e with
        |Pexp_ident({Asttypes.txt=i; _}) -> ([], get_names_from_lident i)
        |_ -> get_bindings_calls e)
     (* get the bindings and calls from the arguments *)
@@ -106,22 +114,46 @@ let rec get_bindings_calls (exp:Parsetree.expression) =
   |Pexp_sequence(_, _) -> raise (Failure "Illegal use of ; (sequence) construct")
   |Pexp_while(_, _) -> raise (Failure "Illegal use of while loop construct")
   |Pexp_for(_, _, _, _, _) -> raise (Failure "Illegal use of for loop construct")
+  (* actually something we can do here is add a dummy call (i.e Module_name.dummy)
+     that works because we will get modules from calls and then we can just
+     filter the dummy function calls out later in get_synopsis or something*)
+  |Pexp_open(_, _) -> ([], [])
   |_ -> ([],[])
 
 and deconstruct_binding_list rf vb_lst = 
   let deconstruct_binding ~acc:(a, b) ~binding:{Parsetree.pvb_pat=bindee; Parsetree.pvb_expr=expr; _} =
-    let binding = (rf = Asttypes.Recursive, get_names_from_pattern bindee)
-    in let sub_bindings, calls = get_bindings_calls expr
-    in (binding::(sub_bindings @ a), union [b; calls])
+    let binding = (rf = Asttypes.Recursive, get_names_from_pattern bindee) in
+    let sub_bindings, calls = get_bindings_calls expr in
+    (binding::(sub_bindings @ a), union [b; calls])
   in List.fold_left (fun a n -> deconstruct_binding ~acc:a ~binding:n) ([], []) vb_lst
 
-let get_synopsis (item:Parsetree.structure_item) ~acc:{modules=m; definitions=d} = 
+let rec get_synopsis {modules=m; definitions=d} ({pstr_desc=desc; _}:Parsetree.structure_item) = 
+  (* for module bindings *)
+  let destruct_pmb acc ({pmb_name={Asttypes.txt=opt; _}; pmb_expr=e; _}:Parsetree.module_binding) =
+    match opt with
+    |None -> from_mod_expr acc e   (* this is probably like the wildcard or something *)
+    |Some(name) -> from_mod_expr {modules=union [[name]; acc.modules]; definitions=acc.definitions} e
+  in
   let default = {modules = m; definitions = d} in
-  match get_desc ~item:item with
-  |Pstr_open (e) -> {modules = union [m; get_module_ident e]; definitions = d}
-  |Pstr_eval(e, _) -> {modules = m; definitions = d @ [get_bindings_calls e]}
-  |Pstr_value(rf,vb_lst) -> {modules = m; definitions = d @ [deconstruct_binding_list rf vb_lst]}
-  (* everything after this shouldn't be used by students *)
-  |Pstr_module(b) -> {modules = add_module_binding m b; definitions = d}
-  |Pstr_recmodule(lst) -> {modules = List.fold_left (add_module_binding) m lst; definitions = d}
+  match desc with
+  |Pstr_open ({popen_expr=e; _}) -> from_mod_expr default e
+  (* should deconstruct the "(module.)*function" function calls *)
+  |Pstr_eval(e, _) -> 
+    let (bindings', calls') = get_bindings_calls e in
+    {modules = union [m; modules_from_calls calls']; definitions = d @ [(bindings', calls')]}
+  |Pstr_value(rf,vb_lst) ->
+    let (bindings', calls') = deconstruct_binding_list rf vb_lst in
+    {modules = union [m; modules_from_calls calls']; definitions = d @ [(bindings', calls')]}
+  |Pstr_module(pmb) -> destruct_pmb default pmb
+  |Pstr_recmodule(lst) -> List.fold_left destruct_pmb default lst
   |_ -> default
+  
+and from_mod_expr {modules=m; definitions=d} e =
+  match e.pmod_desc with
+  |Pmod_ident(x) -> {modules=union [m; parse_loc x]; definitions=d}
+  |Pmod_structure(s) -> 
+    (* goes through structure recursively building new modules and definitions *)
+    List.fold_left get_synopsis {modules=m; definitions=d} s
+  |Pmod_functor(_, _) | Pmod_apply(_, _)
+  |Pmod_apply_unit(_) | Pmod_constraint(_, _) 
+  |Pmod_unpack(_) | Pmod_extension(_) -> raise (Failure "using weird module syntax")

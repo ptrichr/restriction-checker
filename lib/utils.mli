@@ -16,12 +16,10 @@ type _synopsis = {
     called in each binding. *)
 
 val union: string list list -> string list
-val get_desc: item:Parsetree.structure_item -> Parsetree.structure_item_desc
-val get_exp_desc: expression:Parsetree.expression -> Parsetree.expression_desc
-val get_pattern_desc: pattern:Parsetree.pattern -> Parsetree.pattern_desc
+val get_exp_desc: Parsetree.expression -> Parsetree.expression_desc
 val get_names_from_lident: Longident.t -> _identifier list
-val get_module_ident: Parsetree.open_declaration -> _identifier list
-
+(* val get_ppat_open_mod: Longident.t Asttypes.loc -> _identifier list *)
+val modules_from_calls: _identifier list -> _identifier list
 val get_names_from_pattern: Parsetree.pattern -> _identifier list
 (** parses a Parsetree.pattern, gathering all identifiers being bound
     @param p pattern that is binding identifiers
@@ -44,9 +42,11 @@ val deconstruct_binding_list: Asttypes.rec_flag -> Parsetree.value_binding list 
     @return [_definition] representing the value bindings
   *)
 
-val get_synopsis: Parsetree.structure_item -> acc:_synopsis -> _synopsis
+val get_synopsis: _synopsis -> Parsetree.structure_item -> _synopsis
 (** generates updates a synopsis with information via the structure item argument
     @param the item to deconstruct into a synopsis
     @param acc the [_synopsis] to accumulate information into
     @return new updated synopsis record
   *)
+
+val from_mod_expr: _synopsis -> Parsetree.module_expr -> _synopsis
