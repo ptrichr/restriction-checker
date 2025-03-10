@@ -64,7 +64,7 @@ let rec get_names_from_pattern ({ppat_desc=desc; _}:Parsetree.pattern) =
   |Ppat_or(a,b) -> union [get_names_from_pattern a; get_names_from_pattern b]
   |Ppat_constraint(p, _) | Ppat_exception(p) -> get_names_from_pattern p
   (* my gripe with this is that we will have to take in the modules list *)
-  |Ppat_open(_, _) -> failwith "hmm what to do here, we probably should capture the module name?"
+  |Ppat_open(_, p) -> get_names_from_pattern p
   |_ -> raise (Failure "using something like ppat_type, lazy, unpack or extension")
 
 (* are bindings guaranteed to be unique? if no, which ones do we care about? the most recent? *)
