@@ -12,7 +12,15 @@ let read_file src =
 let module_check (synops:Utils._synopsis list) allowed = 
   let open OUnit2 in
   let open List in
-  iter (fun (s:Utils._synopsis) -> iter (fun m -> mem m allowed |> assert_equal true) s.modules) synops
+  iter (fun (s:Utils._synopsis) -> 
+        (* break strings into modules and submodules *)
+        map (String.split_on_char '.') s.modules 
+        (* check if top module is allowed *)
+        |> iter (fun deconstructed -> 
+                  match deconstructed with
+                  |[] -> ()
+                  |prefix::_ -> assert_equal (mem prefix allowed) true))
+  synops
 
 let ref_check (synops:Utils._synopsis list) = 
   let open OUnit2 in
