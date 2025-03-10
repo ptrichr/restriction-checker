@@ -39,7 +39,7 @@ let modules_from_calls calls =
   let parse_dot names = 
     match rev names with
     |[_] -> []
-    |_::t -> t
+    |_::t -> [String.concat "." (rev t)]
     |_ -> []
   in map (String.split_on_char '.') calls |> concat_map parse_dot
 
