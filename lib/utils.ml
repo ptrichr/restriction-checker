@@ -1,6 +1,6 @@
 (** utilities for synopsis *)
 
-module StringSet = Set.Make(String)
+module StringSet = Set.Make(String
 
 type _identifier = string
 type _call = string
